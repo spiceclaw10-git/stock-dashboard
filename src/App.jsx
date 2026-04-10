@@ -18,7 +18,7 @@ const defenseStocks = [
 ];
 
 const generateStockData = () => {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr'];
   return months.map((month, index) => {
     const base = 100 + index * 5;
     return {
@@ -44,7 +44,7 @@ function App() {
     <div className="dashboard">
       <header>
         <h1>Stock Dashboard 2026</h1>
-        <p>Top 5 Tech & Defense Contractors - Year to Date</p>
+        <p>Top 5 Tech & Defense Contractors - Jan 2026 to Apr 2026</p>
       </header>
 
       <section className="chart-section">
