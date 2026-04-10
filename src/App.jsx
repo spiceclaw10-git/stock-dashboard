@@ -1,5 +1,9 @@
+import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import './App.css';
+
+const API_KEY = 'FQK7ABGWB4CL76I5';
+const BASE_URL = 'https://www.alphavantage.co/query';
 
 const techStocks = [
   { name: 'Apple', symbol: 'AAPL', color: '#8884d8' },
@@ -17,29 +21,96 @@ const defenseStocks = [
   { name: 'General Dynamics', symbol: 'GD', color: '#FF8042' },
 ];
 
-const generateStockData = () => {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr'];
-  return months.map((month, index) => {
-    const base = 100 + index * 5;
-    return {
-      month,
-      AAPL: Math.round(base + Math.random() * 20 - 10),
-      MSFT: Math.round(base + 5 + Math.random() * 20 - 10),
-      NVDA: Math.round(base + 10 + Math.random() * 30 - 15),
-      GOOGL: Math.round(base + 3 + Math.random() * 20 - 10),
-      META: Math.round(base + 8 + Math.random() * 25 - 12),
-      LMT: Math.round(base + Math.random() * 15 - 7),
-      RTX: Math.round(base + Math.random() * 15 - 7),
-      NOC: Math.round(base + Math.random() * 15 - 7),
-      BA: Math.round(base + Math.random() * 20 - 10),
-      GD: Math.round(base + Math.random() * 15 - 7),
-    };
-  });
+const allSymbols = [...techStocks, ...defenseStocks].map(s => s.symbol);
+
+const fetchStockData = async (symbol) => {
+  try {
+    const response = await fetch(
+      `${BASE_URL}?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=compact&apikey=${API_KEY}`
+    );
+    const data = await response.json();
+    return data['Time Series (Daily)'] || {};
+  } catch (error) {
+    console.error(`Error fetching ${symbol}:`, error);
+    return {};
+  }
 };
 
-const stockData = generateStockData();
+const formatDate = (dateStr) => {
+  const [year, month, day] = dateStr.split('-');
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${monthNames[parseInt(month) - 1]} ${parseInt(day)}`;
+};
+
+const filterDateRange = (timeSeries, startDate, endDate) => {
+  return Object.entries(timeSeries)
+    .filter(([date]) => date >= startDate && date <= endDate)
+    .sort((a, b) => a[0].localeCompare(b[0]));
+};
 
 function App() {
+  const [stockData, setStockData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchAllData = async () => {
+      setLoading(true);
+      setError(null);
+      
+      const allTimeSeries = {};
+      
+      for (const symbol of allSymbols) {
+        const timeSeries = await fetchStockData(symbol);
+        allTimeSeries[symbol] = timeSeries;
+      }
+
+      const startDate = '2026-01-01';
+      const endDate = '2026-04-10';
+
+      const filteredData = filterDateRange(allTimeSeries[allSymbols[0]], startDate, endDate);
+      
+      const chartData = filteredData.map(([date, values]) => {
+        const dataPoint = { month: formatDate(date) };
+        
+        allSymbols.forEach(symbol => {
+          if (allTimeSeries[symbol] && allTimeSeries[symbol][date]) {
+            dataPoint[symbol] = parseFloat(allTimeSeries[symbol][date]['4. close']);
+          }
+        });
+        
+        return dataPoint;
+      });
+
+      setStockData(chartData);
+      setLoading(false);
+    };
+
+    fetchAllData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="dashboard">
+        <header>
+          <h1>Stock Dashboard 2026</h1>
+          <p>Loading stock data...</p>
+        </header>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="dashboard">
+        <header>
+          <h1>Stock Dashboard 2026</h1>
+          <p>Error: {error}</p>
+        </header>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard">
       <header>
